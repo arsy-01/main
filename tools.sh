@@ -6,13 +6,11 @@ LAYOUT_URL="https://raw.githubusercontent.com/arsy-01/main/refs/heads/main/layou
 install_apk() {
     APK_NAME=$1
     EXPECTED_HASH=$2
-    # MENGGUNAKAN PENYIMPANAN INTERNAL TERMUX AGAR TIDAK KENA PERMISSION DENIED
-    FILE_PATH="${HOME}/${APK_NAME}"
+    FILE_PATH="/sdcard/Download/${APK_NAME}"
 
     clear
     echo "[*] Mengunduh $APK_NAME..."
-    # Menghapus file lama jika ada agar tidak menumpuk
-    rm -f "$FILE_PATH" 
+    rm -f "$FILE_PATH" # Bersihkan file lama
     
     curl -L -# -o "$FILE_PATH" "${BASE_URL}/${APK_NAME}"
 
@@ -23,13 +21,20 @@ install_apk() {
         if [ "$ACTUAL_HASH" == "$EXPECTED_HASH" ]; then
             echo "[*] Verifikasi sukses!"
         else
-            echo "[!] WARNING: Hash SHA256 berbeda!"
-            echo "    (Mungkin ini versi APK baru. File tetap akan diinstal)."
+            echo "[!] WARNING: Hash SHA256 berbeda! (Abaikan jika ini file update terbaru)"
         fi
         
-        echo "[*] Membuka installer Android..."
-        # Memicu installer
-        termux-open "$FILE_PATH"
+        echo "[*] Sedang menginstal di latar belakang (Silent Install)..."
+        echo "[*] Mohon tunggu sebentar..."
+        
+        # Eksekusi instalasi via Root (-r untuk Update/Reinstall tanpa hapus data)
+        INSTALL_STATUS=$(su -c "pm install -r $FILE_PATH")
+        
+        if [[ "$INSTALL_STATUS" == *"Success"* ]]; then
+            echo "[v] BERHASIL! $APK_NAME telah terinstal/diperbarui."
+        else
+            echo "[X] GAGAL MENGINSTAL! Error: $INSTALL_STATUS"
+        fi
     else
         echo "[!] ERROR: Gagal mengunduh $APK_NAME."
     fi
@@ -51,10 +56,10 @@ while true; do
     echo "-----------------------------------"
     echo "             MENU UTAMA            "
     echo "-----------------------------------"
-    echo "[1] Install Delta A"
-    echo "[2] Install Delta B"
-    echo "[3] Install Delta C"
-    echo "[4] Install Delta D"
+    echo "[1] Install / Update Delta A"
+    echo "[2] Install / Update Delta B"
+    echo "[3] Install / Update Delta C"
+    echo "[4] Install / Update Delta D"
     echo "[5] Setup Layout"
     echo "[0] Keluar"
     echo "-----------------------------------"
