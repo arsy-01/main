@@ -27,8 +27,8 @@ install_apk() {
         echo "[*] Sedang menginstal di latar belakang (Silent Install)..."
         echo "[*] Mohon tunggu sebentar..."
         
-        # Eksekusi instalasi via Root (-r untuk Update/Reinstall tanpa hapus data)
-        INSTALL_STATUS=$(su -c "pm install -r $FILE_PATH")
+        # PERBAIKAN: Tambahkan < /dev/null agar root tidak membuat terminal hang
+        INSTALL_STATUS=$(su -c "pm install -r $FILE_PATH" < /dev/null 2>&1)
         
         if [[ "$INSTALL_STATUS" == *"Success"* ]]; then
             echo "[v] BERHASIL! $APK_NAME telah terinstal/diperbarui."
@@ -40,7 +40,8 @@ install_apk() {
     fi
     
     echo ""
-    read -p "Tekan [ENTER] untuk kembali ke menu..."
+    # PERBAIKAN: Paksa baca dari /dev/tty agar keyboard pasti merespon
+    read -p "Tekan [ENTER] untuk kembali ke menu..." dummy < /dev/tty
 }
 
 run_layout() {
@@ -48,7 +49,7 @@ run_layout() {
     echo "[*] Mengunduh dan menjalankan Setup Layout..."
     curl -sL "$LAYOUT_URL" | bash
     echo ""
-    read -p "Tekan [ENTER] untuk kembali ke menu..."
+    read -p "Tekan [ENTER] untuk kembali ke menu..." dummy < /dev/tty
 }
 
 while true; do
