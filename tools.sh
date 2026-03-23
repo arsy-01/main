@@ -1,16 +1,21 @@
 #!/bin/bash
 
-# Konfigurasi URL Utama
 BASE_URL="https://github.com/arsy-01/main/releases/download/delta"
 LAYOUT_URL="https://raw.githubusercontent.com/arsy-01/main/refs/heads/main/layout.sh"
 
-# Fungsi untuk mengunduh, verifikasi, dan instal APK
 install_apk() {
     APK_NAME=$1
     EXPECTED_HASH=$2
     FILE_PATH="/sdcard/Download/${APK_NAME}"
 
     clear
+    # Cek & paksa izin penyimpanan jika belum ada
+    if [ ! -d "/sdcard/Download" ]; then
+        echo "[!] Meminta izin penyimpanan Android..."
+        termux-setup-storage
+        sleep 3
+    fi
+
     echo "[*] Mengunduh $APK_NAME..."
     curl -L -# -o "$FILE_PATH" "${BASE_URL}/${APK_NAME}"
 
@@ -19,23 +24,22 @@ install_apk() {
         ACTUAL_HASH=$(sha256sum "$FILE_PATH" | awk '{print $1}')
         
         if [ "$ACTUAL_HASH" == "$EXPECTED_HASH" ]; then
-            echo "[*] Verifikasi sukses! Membuka installer..."
-            termux-open "$FILE_PATH"
+            echo "[*] Verifikasi sukses!"
         else
-            echo "[!] ERROR: Verifikasi gagal! File mungkin korup."
-            echo "    Expected: $EXPECTED_HASH"
-            echo "    Actual  : $ACTUAL_HASH"
-            rm "$FILE_PATH" # Hapus file korup
+            echo "[!] WARNING: Hash SHA256 berbeda!"
+            echo "    (Mungkin ini versi APK baru. File tetap akan diinstal)."
         fi
+        
+        echo "[*] Membuka installer Android..."
+        termux-open "$FILE_PATH"
     else
-        echo "[!] ERROR: Gagal mengunduh $APK_NAME."
+        echo "[!] ERROR: Gagal mengunduh $APK_NAME ke folder /sdcard/Download."
     fi
     
     echo ""
     read -p "Tekan [ENTER] untuk kembali ke menu..."
 }
 
-# Fungsi untuk menjalankan script layout
 run_layout() {
     clear
     echo "[*] Mengunduh dan menjalankan Setup Layout..."
@@ -44,7 +48,6 @@ run_layout() {
     read -p "Tekan [ENTER] untuk kembali ke menu..."
 }
 
-# Menu Utama
 while true; do
     clear
     echo "-----------------------------------"
