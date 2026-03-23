@@ -6,17 +6,14 @@ LAYOUT_URL="https://raw.githubusercontent.com/arsy-01/main/refs/heads/main/layou
 install_apk() {
     APK_NAME=$1
     EXPECTED_HASH=$2
-    FILE_PATH="/sdcard/Download/${APK_NAME}"
+    # MENGGUNAKAN PENYIMPANAN INTERNAL TERMUX AGAR TIDAK KENA PERMISSION DENIED
+    FILE_PATH="${HOME}/${APK_NAME}"
 
     clear
-    # Cek & paksa izin penyimpanan jika belum ada
-    if [ ! -d "/sdcard/Download" ]; then
-        echo "[!] Meminta izin penyimpanan Android..."
-        termux-setup-storage
-        sleep 3
-    fi
-
     echo "[*] Mengunduh $APK_NAME..."
+    # Menghapus file lama jika ada agar tidak menumpuk
+    rm -f "$FILE_PATH" 
+    
     curl -L -# -o "$FILE_PATH" "${BASE_URL}/${APK_NAME}"
 
     if [ -f "$FILE_PATH" ]; then
@@ -31,9 +28,10 @@ install_apk() {
         fi
         
         echo "[*] Membuka installer Android..."
+        # Memicu installer
         termux-open "$FILE_PATH"
     else
-        echo "[!] ERROR: Gagal mengunduh $APK_NAME ke folder /sdcard/Download."
+        echo "[!] ERROR: Gagal mengunduh $APK_NAME."
     fi
     
     echo ""
