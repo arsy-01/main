@@ -144,8 +144,7 @@ run_layout_and_engine() {
         case $run_choice in
             1)
                 clear
-                echo "[*] Memulai proses Setup Layout & Buka Aplikasi..."
-                execute_layout
+                echo "[*] Memulai proses Buka Aplikasi & Setup Layout..."
                 
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then
@@ -163,10 +162,14 @@ run_layout_and_engine() {
                 echo "[*] Membuka semua aplikasi untuk Login..."
                 for pkg in $PACKAGES; do
                     echo " -> Membuka $pkg..."
-                    # Menggunakan 'monkey' untuk membuka app secara default tanpa link intent
+                    # Membuka aplikasi tanpa link (normal start)
                     su -c "monkey -p $pkg -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1"
-                    sleep 1
+                    echo "    Menunggu 5 detik untuk menstabilkan CPU..."
+                    sleep 5 
                 done
+                
+                # Menjalankan layout setelah semua aplikasi terbuka
+                execute_layout
                 
                 echo ""
                 echo "[+] Selesai! Silakan login ke akun Anda di masing-masing aplikasi."
@@ -181,8 +184,7 @@ run_layout_and_engine() {
                 fi
                 VIP_LINK=$(cat "$CONFIG_FILE")
                 
-                echo "[*] Memulai proses Setup Layout & Mesin Auto AFK..."
-                execute_layout
+                echo "[*] Memulai proses Mesin Auto AFK & Setup Layout..."
 
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then
@@ -197,22 +199,27 @@ run_layout_and_engine() {
                 done
                 sleep 2
 
+                echo "[*] Membuka VIP Server di semua instance..."
+                for pkg in $PACKAGES; do
+                    echo " -> Launching $pkg ke VIP..."
+                    # Membuka aplikasi dengan link VIP
+                    su -c "am start -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
+                    echo "    Menunggu 8 detik agar game memuat dan CPU stabil..."
+                    sleep 8 
+                done
+
+                # Menjalankan layout setelah semua game terbuka
+                execute_layout
+
                 echo "[*] Membawa Termux ke Background (Menuju Home Screen)..."
-                # Mensimulasikan tombol Home agar Termux berjalan senyap di belakang
+                # Menyembunyikan Termux agar visual layout tidak tertutup
                 su -c "input keyevent 3"
                 sleep 2
 
-                # Karena Termux di-hide, kita jalankan Roblox di atasnya
-                echo "[*] Membuka VIP Server di semua instance..."
-                for pkg in $PACKAGES; do
-                    su -c "am start -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
-                    sleep 1
-                done
-
-                # Optimasi awal
+                # Pembersihan RAM pertama kali setelah semua game termuat
                 drop_android_ram
 
-                # Menangkap perintah CTRL+C jika Anda membuka Termux lagi
+                # Menangkap perintah CTRL+C jika Termux dibuka kembali
                 trap "echo -e '\n[!] Keluar dari Mode AFK...'; break" INT
                 loop_count=1
                 
