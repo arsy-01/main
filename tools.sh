@@ -8,8 +8,15 @@ CONFIG_FILE="/sdcard/Download/.vip_link_arsy.txt"
 # FUNGSI BANTUAN
 # ==========================================
 drop_android_ram() {
-    # Membuang cache RAM Kernel secara paksa via Root
-    su -c 'sync; echo 3 > /proc/sys/vm/drop_caches'
+    # Metode aman untuk Cloud Phone (tanpa menyentuh kernel/menghindari Read-only error)
+    # 1. Membunuh semua aplikasi latar belakang yang tidak penting
+    su -c 'am kill-all' > /dev/null 2>&1
+    
+    # 2. Memaksa sistem memeras RAM dari aplikasi Roblox yang sedang berjalan
+    PACKAGES=$(get_roblox_packages)
+    for pkg in $PACKAGES; do
+        su -c "cmd activity send-trim-memory $pkg RUNNING_LOW" > /dev/null 2>&1
+    done
 }
 
 get_roblox_packages() {
@@ -20,6 +27,15 @@ get_roblox_packages() {
 execute_layout() {
     echo "[*] Mengunduh dan mengeksekusi Setup Layout..."
     curl -sL "$LAYOUT_URL" | bash
+    sleep 2
+}
+
+lock_landscape() {
+    echo "[*] Mengunci perangkat ke mode Landscape..."
+    # Mematikan auto-rotate (0 = off)
+    su -c 'settings put system accelerometer_rotation 0'
+    # Memaksa rotasi ke Landscape (rotasi 90 derajat = 1)
+    su -c 'settings put system user_rotation 1'
     sleep 2
 }
 
@@ -145,6 +161,7 @@ run_layout_and_engine() {
             1)
                 clear
                 echo "[*] Memulai proses Buka Aplikasi & Setup Layout..."
+                lock_landscape # Kunci layar di awal
                 
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then
@@ -166,7 +183,6 @@ run_layout_and_engine() {
                     sleep 3
                 done
                 
-                # Eksekusi layout dan biarkan me-reload
                 execute_layout
                 
                 echo ""
@@ -183,6 +199,7 @@ run_layout_and_engine() {
                 VIP_LINK=$(cat "$CONFIG_FILE")
                 
                 echo "[*] Memulai Mesin Auto AFK (Mode Inject Susulan)..."
+                lock_landscape # Kunci layar di awal
 
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then
@@ -200,22 +217,20 @@ run_layout_and_engine() {
                 echo "[*] TAHAP 2: Buka aplikasi secara normal..."
                 for pkg in $PACKAGES; do
                     su -c "monkey -p $pkg -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1"
-                    sleep 2
+                    sleep 3
                 done
 
                 echo "[*] TAHAP 3: Menata Layout Grid..."
                 execute_layout
                 
-                echo "    Menunggu 15 detik agar aplikasi selesai me-reload di mode Grid..."
-                # Jeda kritis: Pastikan Roblox sudah memuat home screen dengan sempurna
+                echo "    Menunggu 15 detik agar aplikasi me-reload di mode Grid..."
                 sleep 15 
 
                 echo "[*] TAHAP 4: Menembakkan Link VIP ke aplikasi Grid..."
                 for pkg in $PACKAGES; do
                     echo " -> Injecting VIP ke $pkg..."
                     su -c "am start -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
-                    # Jeda antar masuk game agar CPU tidak spike
-                    sleep 30
+                    sleep 15 
                 done
 
                 echo "[*] Membawa Termux ke Background..."
@@ -225,7 +240,8 @@ run_layout_and_engine() {
                 # Pembersihan RAM pertama
                 drop_android_ram
 
-                trap "echo -e '\n[!] Keluar dari Mode AFK...'; break" INT
+                # Menangkap perintah CTRL+C. Jika keluar, kembalikan layar ke auto-rotate
+                trap "echo -e '\n[!] Keluar dari Mode AFK...'; su -c 'settings put system accelerometer_rotation 1'; break" INT
                 loop_count=1
                 
                 # Proses RAM senyap (Setiap 5 Menit)
@@ -241,6 +257,7 @@ run_layout_and_engine() {
         esac
     done
 }
+
 # ==========================================
 # MENU UTAMA
 # ==========================================
