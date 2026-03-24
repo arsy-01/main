@@ -8,11 +8,8 @@ CONFIG_FILE="/sdcard/Download/.vip_link_arsy.txt"
 # FUNGSI BANTUAN
 # ==========================================
 drop_android_ram() {
-    # Metode aman untuk Cloud Phone (tanpa menyentuh kernel/menghindari Read-only error)
-    # 1. Membunuh semua aplikasi latar belakang yang tidak penting
+    # Metode aman untuk Cloud Phone
     su -c 'am kill-all' > /dev/null 2>&1
-    
-    # 2. Memaksa sistem memeras RAM dari aplikasi Roblox yang sedang berjalan
     PACKAGES=$(get_roblox_packages)
     for pkg in $PACKAGES; do
         su -c "cmd activity send-trim-memory $pkg RUNNING_LOW" > /dev/null 2>&1
@@ -20,7 +17,6 @@ drop_android_ram() {
 }
 
 get_roblox_packages() {
-    # Mendeteksi semua aplikasi dengan package name yang mengandung 'roblox'
     su -c 'pm list packages' | grep -i 'roblox' | awk -F':' '{print $2}' | tr -d '\r'
 }
 
@@ -31,12 +27,22 @@ execute_layout() {
 }
 
 lock_landscape() {
-    echo "[*] Mengunci perangkat ke mode Landscape..."
-    # Mematikan auto-rotate (0 = off)
+    echo "[*] Memaksa rotasi DEVICE ke mode Landscape..."
+    
+    # 1. Matikan auto-rotate
     su -c 'settings put system accelerometer_rotation 0'
-    # Memaksa rotasi ke Landscape (rotasi 90 derajat = 1)
+    
+    # 2. Paksa rotasi ke mode Landscape (1 = 90 derajat)
     su -c 'settings put system user_rotation 1'
-    sleep 2
+    
+    # 3. Lapis kedua: Injeksi paksa ke database setting internal Android (Ampuh untuk Emulator/Cloud Phone)
+    su -c 'content insert --uri content://settings/system --bind name:s:user_rotation --bind value:i:1' > /dev/null 2>&1
+    
+    # 4. Refresh konfigurasi UI secara menyeluruh
+    su -c 'am broadcast -a android.intent.action.CONFIGURATION_CHANGED' > /dev/null 2>&1
+    
+    echo "    Menunggu penyesuaian layar..."
+    sleep 3
 }
 
 # ==========================================
@@ -161,7 +167,7 @@ run_layout_and_engine() {
             1)
                 clear
                 echo "[*] Memulai proses Buka Aplikasi & Setup Layout..."
-                lock_landscape # Kunci layar di awal
+                lock_landscape
                 
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then
@@ -199,7 +205,7 @@ run_layout_and_engine() {
                 VIP_LINK=$(cat "$CONFIG_FILE")
                 
                 echo "[*] Memulai Mesin Auto AFK (Mode Inject Susulan)..."
-                lock_landscape # Kunci layar di awal
+                lock_landscape
 
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then
@@ -237,14 +243,11 @@ run_layout_and_engine() {
                 su -c "input keyevent 3"
                 sleep 2
 
-                # Pembersihan RAM pertama
                 drop_android_ram
 
-                # Menangkap perintah CTRL+C. Jika keluar, kembalikan layar ke auto-rotate
                 trap "echo -e '\n[!] Keluar dari Mode AFK...'; su -c 'settings put system accelerometer_rotation 1'; break" INT
                 loop_count=1
                 
-                # Proses RAM senyap (Setiap 5 Menit)
                 while true; do
                     sleep 300
                     drop_android_ram
