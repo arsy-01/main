@@ -162,17 +162,15 @@ run_layout_and_engine() {
                 echo "[*] Membuka semua aplikasi untuk Login..."
                 for pkg in $PACKAGES; do
                     echo " -> Membuka $pkg..."
-                    # Membuka aplikasi tanpa link (normal start)
                     su -c "monkey -p $pkg -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1"
-                    echo "    Menunggu 5 detik untuk menstabilkan CPU..."
-                    sleep 5 
+                    sleep 3
                 done
                 
-                # Menjalankan layout setelah semua aplikasi terbuka
+                # Eksekusi layout dan biarkan me-reload
                 execute_layout
                 
                 echo ""
-                echo "[+] Selesai! Silakan login ke akun Anda di masing-masing aplikasi."
+                echo "[+] Selesai! Aplikasi sudah berukuran Grid. Silakan login ke akun Anda."
                 read -p "Tekan [ENTER] untuk kembali..." dummy < /dev/tty
                 ;;
             2)
@@ -184,7 +182,7 @@ run_layout_and_engine() {
                 fi
                 VIP_LINK=$(cat "$CONFIG_FILE")
                 
-                echo "[*] Memulai proses Mesin Auto AFK & Setup Layout..."
+                echo "[*] Memulai Mesin Auto AFK (Mode Inject Susulan)..."
 
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then
@@ -193,50 +191,56 @@ run_layout_and_engine() {
                     continue
                 fi
 
-                echo "[*] Menghentikan semua instance agar fresh..."
+                echo "[*] TAHAP 1: Menghentikan semua instance..."
                 for pkg in $PACKAGES; do
                     su -c "am force-stop $pkg"
                 done
                 sleep 2
 
-                echo "[*] Membuka VIP Server di semua instance..."
+                echo "[*] TAHAP 2: Buka aplikasi secara normal..."
                 for pkg in $PACKAGES; do
-                    echo " -> Launching $pkg ke VIP..."
-                    # Membuka aplikasi dengan link VIP
-                    su -c "am start -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
-                    echo "    Menunggu 8 detik agar game memuat dan CPU stabil..."
-                    sleep 8 
+                    su -c "monkey -p $pkg -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1"
+                    sleep 2
                 done
 
-                # Menjalankan layout setelah semua game terbuka
+                echo "[*] TAHAP 3: Menata Layout Grid..."
                 execute_layout
+                
+                echo "    Menunggu 15 detik agar aplikasi selesai me-reload di mode Grid..."
+                # Jeda kritis: Pastikan Roblox sudah memuat home screen dengan sempurna
+                sleep 15 
 
-                echo "[*] Membawa Termux ke Background (Menuju Home Screen)..."
-                # Menyembunyikan Termux agar visual layout tidak tertutup
+                echo "[*] TAHAP 4: Menembakkan Link VIP ke aplikasi Grid..."
+                for pkg in $PACKAGES; do
+                    echo " -> Injecting VIP ke $pkg..."
+                    su -c "am start -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
+                    # Jeda antar masuk game agar CPU tidak spike
+                    sleep 5 
+                done
+
+                echo "[*] Membawa Termux ke Background..."
                 su -c "input keyevent 3"
                 sleep 2
 
-                # Pembersihan RAM pertama kali setelah semua game termuat
+                # Pembersihan RAM pertama
                 drop_android_ram
 
-                # Menangkap perintah CTRL+C jika Termux dibuka kembali
                 trap "echo -e '\n[!] Keluar dari Mode AFK...'; break" INT
                 loop_count=1
                 
-                # Proses RAM berjalan senyap di background setiap 5 Menit (300 Detik)
+                # Proses RAM senyap (Setiap 5 Menit)
                 while true; do
                     sleep 300
                     drop_android_ram
                     ((loop_count++))
                 done
-                trap - INT # Reset fungsi CTRL+C ke default setelah loop selesai
+                trap - INT
                 ;;
             0) break ;;
             *) echo "[!] Pilihan tidak valid"; sleep 1 ;;
         esac
     done
 }
-
 # ==========================================
 # MENU UTAMA
 # ==========================================
