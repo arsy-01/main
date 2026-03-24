@@ -26,6 +26,37 @@ execute_layout() {
     sleep 2
 }
 
+# Fungsi Auto-Inject Lua ke folder Autoexecute & Scripts
+deploy_lua_script() {
+    echo "[*] Mempersiapkan injeksi file Lua ke Delta..."
+    PACKAGES=$(get_roblox_packages)
+    LUA_CONTENT='loadstring(game:HttpGet("https://raw.githubusercontent.com/arsy-01/main/main/card.lua"))()'
+    
+    for pkg in $PACKAGES; do
+        DIR_AUTOEXEC="/sdcard/Android/data/$pkg/files/gloop/external/Autoexecute"
+        DIR_SCRIPTS="/sdcard/Android/data/$pkg/files/gloop/external/Scripts"
+        
+        echo " -> Memproses $pkg..."
+        
+        # 1. Injeksi ke folder Autoexecute
+        if su -c "[ -d \"$DIR_AUTOEXEC\" ]"; then
+            su -c "echo '$LUA_CONTENT' > \"$DIR_AUTOEXEC/arsy_card.lua\""
+            echo "    [v] Berhasil ditambahkan/ditimpa di folder Autoexecute"
+        else
+            echo "    [!] Folder Autoexecute belum ada (Dilewati)"
+        fi
+        
+        # 2. Injeksi ke folder Scripts
+        if su -c "[ -d \"$DIR_SCRIPTS\" ]"; then
+            su -c "echo '$LUA_CONTENT' > \"$DIR_SCRIPTS/arsy_card.lua\""
+            echo "    [v] Berhasil ditambahkan/ditimpa di folder Scripts"
+        else
+            echo "    [!] Folder Scripts belum ada (Dilewati)"
+        fi
+    done
+    sleep 2
+}
+
 # ==========================================
 # FUNGSI INSTALL APK
 # ==========================================
@@ -162,6 +193,9 @@ run_layout_and_engine() {
                 done
                 sleep 2
 
+                # Eksekusi Inject Lua sebelum aplikasi terbuka
+                deploy_lua_script
+
                 echo "[*] Membuka semua aplikasi untuk Login..."
                 for pkg in $PACKAGES; do
                     echo " -> Membuka $pkg..."
@@ -198,6 +232,9 @@ run_layout_and_engine() {
                     su -c "am force-stop $pkg"
                 done
                 sleep 2
+
+                # Eksekusi Inject Lua sebelum aplikasi terbuka
+                deploy_lua_script
 
                 echo "[*] TAHAP 2: Membuka aplikasi secara normal..."
                 for pkg in $PACKAGES; do
