@@ -230,7 +230,7 @@ run_layout_and_engine() {
                 for pkg in $PACKAGES; do
                     echo " -> Injecting VIP ke $pkg..."
                     su -c "am start -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
-                    sleep 15 
+                    sleep 30 
                 done
 
                 echo "[*] Membawa Termux ke Background..."
