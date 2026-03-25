@@ -25,9 +25,28 @@ execute_layout() {
     sleep 2
 }
 
-# FUNGSI KUNCI LANDSCAPE OTOMATIS
-force_landscape_mode() {
-    echo "[*] Memaksa dan mengunci layar ke mode Landscape..."
+# FUNGSI PINTAR: DETEKSI DEVICE BARU & KUNCI LANDSCAPE
+prepare_device_environment() {
+    echo "[*] Memeriksa konfigurasi sistem Android..."
+    
+    # Mengecek apakah fitur Freeform Windows sudah aktif di dalam sistem
+    FREEFORM_STATUS=$(su -c 'settings get global enable_freeform_support' | tr -d '\r')
+    
+    if [ "$FREEFORM_STATUS" != "1" ]; then
+        echo "    [!] DEVICE BARU TERDETEKSI!"
+        echo "    [*] Menyuntikkan konfigurasi Multi-Window (Freeform)..."
+        su -c 'settings put global enable_freeform_support 1' > /dev/null 2>&1
+        su -c 'settings put global force_resizable_activities 1' > /dev/null 2>&1
+        echo "    --------------------------------------------------------"
+        echo "    [!] PENGATURAN BERHASIL DITERAPKAN!"
+        echo "    [!] Karena ini adalah device baru, Android MEWAJIBKAN RESTART."
+        echo "    [!] Silakan REBOOT/RESTART Redfinger Anda sekarang."
+        echo "    [!] Setelah menyala kembali, jalankan ulang script ini."
+        echo "    --------------------------------------------------------"
+        exit 0
+    fi
+
+    echo "    [*] Memaksa dan mengunci layar ke mode Landscape..."
     su -c 'settings put system accelerometer_rotation 0' > /dev/null 2>&1
     su -c 'settings put system user_rotation 1' > /dev/null 2>&1
     su -c 'am broadcast -a android.intent.action.CONFIGURATION_CHANGED' > /dev/null 2>&1
@@ -171,8 +190,8 @@ run_layout_and_engine() {
                 clear
                 echo "[*] Memulai proses Buka Aplikasi & Setup Layout..."
                 
-                # DIEKSEKUSI PERTAMA KALI SEBELUM BUKA APP
-                force_landscape_mode
+                # Cek Multi-Window & Paksa Landscape SEBELUM melakukan apapun
+                prepare_device_environment
                 
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
@@ -203,8 +222,8 @@ run_layout_and_engine() {
                 
                 echo "[*] Memulai Mesin Auto AFK..."
                 
-                # DIEKSEKUSI PERTAMA KALI SEBELUM BUKA APP
-                force_landscape_mode
+                # Cek Multi-Window & Paksa Landscape SEBELUM melakukan apapun
+                prepare_device_environment
 
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
@@ -233,7 +252,7 @@ run_layout_and_engine() {
                     echo " -> Injecting VIP ke $pkg..."
                     su -c "am start --windowingMode 5 -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
                     echo "    Menunggu 60 detik agar game termuat penuh..."
-                    sleep 45 
+                    sleep 60 
                 done
 
                 echo "[*] Memasuki Mode AFK..."
