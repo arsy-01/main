@@ -8,7 +8,6 @@ CONFIG_FILE="/sdcard/Download/.vip_link_arsy.txt"
 # FUNGSI BANTUAN
 # ==========================================
 drop_android_ram() {
-    # Metode aman untuk Cloud Phone (Tanpa menyentuh file kernel Read-only)
     su -c 'am kill-all' > /dev/null 2>&1
     PACKAGES=$(get_roblox_packages)
     for pkg in $PACKAGES; do
@@ -21,12 +20,11 @@ get_roblox_packages() {
 }
 
 execute_layout() {
-    echo "[*] Mengunduh dan mengeksekusi Setup Layout..."
+    echo "[*] Mengunduh dan mengeksekusi Setup Layout dari GitHub..."
     curl -sL "$LAYOUT_URL" | bash
     sleep 2
 }
 
-# Fungsi Auto-Inject Lua ke folder Autoexecute & Scripts
 deploy_lua_script() {
     echo "[*] Mempersiapkan injeksi file Lua ke Delta..."
     PACKAGES=$(get_roblox_packages)
@@ -38,18 +36,16 @@ deploy_lua_script() {
         
         echo " -> Memproses $pkg..."
         
-        # 1. Injeksi ke folder Autoexecute
         if su -c "[ -d \"$DIR_AUTOEXEC\" ]"; then
             su -c "echo '$LUA_CONTENT' > \"$DIR_AUTOEXEC/arsy_card.lua\""
-            echo "    [v] Berhasil ditambahkan/ditimpa di folder Autoexecute"
+            echo "    [v] Berhasil ditambahkan di folder Autoexecute"
         else
             echo "    [!] Folder Autoexecute belum ada (Dilewati)"
         fi
         
-        # 2. Injeksi ke folder Scripts
         if su -c "[ -d \"$DIR_SCRIPTS\" ]"; then
             su -c "echo '$LUA_CONTENT' > \"$DIR_SCRIPTS/arsy_card.lua\""
-            echo "    [v] Berhasil ditambahkan/ditimpa di folder Scripts"
+            echo "    [v] Berhasil ditambahkan di folder Scripts"
         else
             echo "    [!] Folder Scripts belum ada (Dilewati)"
         fi
@@ -69,20 +65,11 @@ install_apk() {
     clear
     echo "[*] Mengunduh $APK_NAME..."
     rm -f "$FILE_PATH"
-    
     curl -L -# -o "$FILE_PATH" "${BASE_URL}/${APK_NAME}"
 
     if [ -f "$FILE_PATH" ]; then
-        echo "[*] Memverifikasi integritas file..."
-        ACTUAL_HASH=$(sha256sum "$FILE_PATH" | awk '{print $1}')
-        
-        if [ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]; then
-            echo "[!] WARNING: Hash SHA256 berbeda! (Abaikan jika file update)"
-        fi
-        
-        echo "[*] Sedang menginstal $APK_NAME..."
+        echo "[*] Memverifikasi dan menginstal..."
         INSTALL_STATUS=$(su -c "pm install -r $FILE_PATH" < /dev/null 2>&1)
-        
         if [[ "$INSTALL_STATUS" == *"Success"* ]]; then
             echo "[v] BERHASIL! $APK_NAME terinstal."
         else
@@ -135,18 +122,13 @@ apk_menu() {
     done
 }
 
-# ==========================================
-# FUNGSI INPUT LINK VIP
-# ==========================================
 input_vip_link() {
     clear
     echo "-----------------------------------"
     echo "       INPUT VIP SERVER LINK       "
     echo "-----------------------------------"
     local current_link=""
-    if [ -f "$CONFIG_FILE" ]; then
-        current_link=$(cat "$CONFIG_FILE")
-    fi
+    if [ -f "$CONFIG_FILE" ]; then current_link=$(cat "$CONFIG_FILE"); fi
     echo "Link Saat Ini: ${current_link:-[KOSONG]}"
     echo ""
     read -p "Masukkan Link VIP baru: " new_link
@@ -179,21 +161,13 @@ run_layout_and_engine() {
             1)
                 clear
                 echo "[*] Memulai proses Buka Aplikasi & Setup Layout..."
-                
                 PACKAGES=$(get_roblox_packages)
-                if [ -z "$PACKAGES" ]; then
-                    echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"
-                    sleep 2
-                    continue
-                fi
+                if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
 
                 echo "[*] Menghentikan semua instance agar fresh..."
-                for pkg in $PACKAGES; do
-                    su -c "am force-stop $pkg"
-                done
+                for pkg in $PACKAGES; do su -c "am force-stop $pkg"; done
                 sleep 2
 
-                # Eksekusi Inject Lua sebelum aplikasi terbuka
                 deploy_lua_script
 
                 echo "[*] Membuka semua aplikasi untuk Login..."
@@ -211,29 +185,17 @@ run_layout_and_engine() {
                 ;;
             2)
                 clear
-                if [ ! -f "$CONFIG_FILE" ]; then
-                    echo "[!] Link VIP belum diatur! Silakan isi di Menu Utama."
-                    sleep 2
-                    continue
-                fi
+                if [ ! -f "$CONFIG_FILE" ]; then echo "[!] Link VIP belum diatur! Silakan isi di Menu Utama."; sleep 2; continue; fi
                 VIP_LINK=$(cat "$CONFIG_FILE")
                 
                 echo "[*] Memulai Mesin Auto AFK..."
-
                 PACKAGES=$(get_roblox_packages)
-                if [ -z "$PACKAGES" ]; then
-                    echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"
-                    sleep 2
-                    continue
-                fi
+                if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
 
                 echo "[*] TAHAP 1: Menghentikan semua instance..."
-                for pkg in $PACKAGES; do
-                    su -c "am force-stop $pkg"
-                done
+                for pkg in $PACKAGES; do su -c "am force-stop $pkg"; done
                 sleep 2
 
-                # Eksekusi Inject Lua sebelum aplikasi terbuka
                 deploy_lua_script
 
                 echo "[*] TAHAP 2: Membuka aplikasi secara normal..."
@@ -242,7 +204,7 @@ run_layout_and_engine() {
                     sleep 3
                 done
 
-                echo "[*] TAHAP 3: Mengeksekusi Layout Grid..."
+                echo "[*] TAHAP 3: Mengeksekusi Layout Grid dari GitHub..."
                 execute_layout
                 
                 echo "    Menunggu 15 detik agar aplikasi me-reload di mode Grid..."
@@ -252,20 +214,18 @@ run_layout_and_engine() {
                 for pkg in $PACKAGES; do
                     echo " -> Injecting VIP ke $pkg..."
                     su -c "am start -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
-                    sleep 30 
+                    sleep 8 
                 done
 
                 echo "[*] Membawa Termux ke Background..."
                 su -c "input keyevent 3"
                 sleep 2
 
-                # Pembersihan RAM pertama
                 drop_android_ram
 
                 trap "echo -e '\n[!] Keluar dari Mode AFK...'; break" INT
                 loop_count=1
                 
-                # Proses RAM senyap (Setiap 5 Menit)
                 while true; do
                     sleep 300
                     drop_android_ram
@@ -294,9 +254,7 @@ while true; do
     echo "-----------------------------------"
     
     STATUS_LINK="[KOSONG]"
-    if [ -f "$CONFIG_FILE" ]; then
-        STATUS_LINK="[Terisi]"
-    fi
+    if [ -f "$CONFIG_FILE" ]; then STATUS_LINK="[Terisi]"; fi
     echo "* Status VIP Link: $STATUS_LINK"
     echo "-----------------------------------"
     
