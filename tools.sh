@@ -233,7 +233,7 @@ run_layout_and_engine() {
                     echo " -> Injecting VIP ke $pkg..."
                     su -c "am start --windowingMode 5 -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
                     echo "    Menunggu 60 detik agar game termuat penuh..."
-                    sleep 60 
+                    sleep 45 
                 done
 
                 echo "[*] Memasuki Mode AFK..."
