@@ -214,11 +214,11 @@ run_layout_and_engine() {
                 for pkg in $PACKAGES; do
                     echo " -> Injecting VIP ke $pkg..."
                     su -c "am start -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
-                    sleep 8 
+                    echo "    Menunggu 60 detik agar game termuat penuh..."
+                    sleep 60 
                 done
 
-                echo "[*] Membawa Termux ke Background..."
-                su -c "input keyevent 3"
+                echo "[*] Memasuki Mode AFK..."
                 sleep 2
 
                 drop_android_ram
