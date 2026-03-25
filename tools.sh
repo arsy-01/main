@@ -25,11 +25,11 @@ execute_layout() {
     sleep 2
 }
 
-# FUNGSI KUNCI LANDSCAPE OTOMATIS
+# FUNGSI KUNCI LANDSCAPE OTOMATIS (MENGGUNAKAN ANGKA SAKTI 1)
 force_landscape_mode() {
     echo "[*] Memaksa dan mengunci layar ke mode Landscape..."
     su -c 'settings put system accelerometer_rotation 0' > /dev/null 2>&1
-    su -c 'settings put system user_rotation 0' > /dev/null 2>&1
+    su -c 'settings put system user_rotation 1' > /dev/null 2>&1
     su -c 'am broadcast -a android.intent.action.CONFIGURATION_CHANGED' > /dev/null 2>&1
     sleep 3
 }
@@ -186,7 +186,7 @@ run_layout_and_engine() {
                     sleep 3
                 done
                 
-                # Mengunci layar menjadi Landscape SEBELUM dipotong
+                # Mengunci layar menjadi Landscape menggunakan rotasi '1' SEBELUM dipotong
                 force_landscape_mode
                 
                 execute_layout
@@ -217,7 +217,7 @@ run_layout_and_engine() {
                     sleep 3
                 done
 
-                # Mengunci layar menjadi Landscape SEBELUM dipotong
+                # Mengunci layar menjadi Landscape menggunakan rotasi '1' SEBELUM dipotong
                 force_landscape_mode
 
                 echo "[*] TAHAP 4: Mengeksekusi Layout Grid dari GitHub..."
