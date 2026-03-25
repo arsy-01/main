@@ -8,6 +8,7 @@ CONFIG_FILE="/sdcard/Download/.vip_link_arsy.txt"
 # FUNGSI BANTUAN
 # ==========================================
 drop_android_ram() {
+    # Metode aman untuk Cloud Phone
     su -c 'am kill-all' > /dev/null 2>&1
     PACKAGES=$(get_roblox_packages)
     for pkg in $PACKAGES; do
@@ -22,6 +23,16 @@ get_roblox_packages() {
 execute_layout() {
     echo "[*] Mengunduh dan mengeksekusi Setup Layout dari GitHub..."
     curl -sL "$LAYOUT_URL" | bash
+    sleep 2
+}
+
+# FUNGSI BARU: Mengembalikan Rotasi ke Landscape Asli Cloud Phone
+reset_display_rotation() {
+    echo "[*] Menstabilkan orientasi layar ke mode Default (Landscape)..."
+    su -c 'settings put system accelerometer_rotation 0' > /dev/null 2>&1
+    su -c 'settings put system user_rotation 0' > /dev/null 2>&1
+    su -c 'content insert --uri content://settings/system --bind name:s:user_rotation --bind value:i:0' > /dev/null 2>&1
+    su -c 'wm rotation 0' > /dev/null 2>&1
     sleep 2
 }
 
@@ -161,6 +172,10 @@ run_layout_and_engine() {
             1)
                 clear
                 echo "[*] Memulai proses Buka Aplikasi & Setup Layout..."
+                
+                # Panggil fungsi reset rotasi sebelum aplikasi terbuka
+                reset_display_rotation
+                
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
 
@@ -189,6 +204,10 @@ run_layout_and_engine() {
                 VIP_LINK=$(cat "$CONFIG_FILE")
                 
                 echo "[*] Memulai Mesin Auto AFK..."
+                
+                # Panggil fungsi reset rotasi sebelum mulai AFK
+                reset_display_rotation
+                
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
 
