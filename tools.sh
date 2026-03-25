@@ -25,6 +25,15 @@ execute_layout() {
     sleep 2
 }
 
+# FUNGSI KUNCI LANDSCAPE OTOMATIS
+force_landscape_mode() {
+    echo "[*] Memaksa dan mengunci layar ke mode Landscape..."
+    su -c 'settings put system accelerometer_rotation 0' > /dev/null 2>&1
+    su -c 'settings put system user_rotation 0' > /dev/null 2>&1
+    su -c 'am broadcast -a android.intent.action.CONFIGURATION_CHANGED' > /dev/null 2>&1
+    sleep 3
+}
+
 deploy_lua_script() {
     echo "[*] Mempersiapkan injeksi file Lua ke Delta..."
     PACKAGES=$(get_roblox_packages)
@@ -177,11 +186,8 @@ run_layout_and_engine() {
                     sleep 3
                 done
                 
-                echo "--------------------------------------------------------"
-                echo "[!] PENTING: Aplikasi sedang memuat di layar utama (Portrait)."
-                echo "[!] Silakan putar layar Redfinger ke mode LANDSCAPE secara manual sekarang!"
-                echo "--------------------------------------------------------"
-                read -p "Jika layar SUDAH Landscape, tekan [ENTER] untuk memotong Grid..." dummy < /dev/tty
+                # Mengunci layar menjadi Landscape SEBELUM dipotong
+                force_landscape_mode
                 
                 execute_layout
                 
@@ -205,11 +211,24 @@ run_layout_and_engine() {
                 echo "[*] TAHAP 2: Deploy Lua Script..."
                 deploy_lua_script
 
-                # Langsung menembakkan Link VIP (tanpa membuka Home Screen)
-                echo "[*] TAHAP 3: Menembakkan Link VIP..."
+                echo "[*] TAHAP 3: Membuka aplikasi secara normal..."
+                for pkg in $PACKAGES; do
+                    su -c "monkey -p $pkg -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1"
+                    sleep 3
+                done
+
+                # Mengunci layar menjadi Landscape SEBELUM dipotong
+                force_landscape_mode
+
+                echo "[*] TAHAP 4: Mengeksekusi Layout Grid dari GitHub..."
+                execute_layout
+                
+                echo "    Menunggu 15 detik agar aplikasi me-reload di mode Grid..."
+                sleep 15 
+
+                echo "[*] TAHAP 5: Menembakkan Link VIP..."
                 for pkg in $PACKAGES; do
                     echo " -> Injecting VIP ke $pkg..."
-                    # Menambahkan flag --windowingMode 5 untuk mengunci game ke dalam mode Freeform/Grid
                     su -c "am start --windowingMode 5 -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
                     echo "    Menunggu 60 detik agar game termuat penuh..."
                     sleep 60 
