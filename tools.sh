@@ -25,7 +25,7 @@ execute_layout() {
     sleep 2
 }
 
-# FUNGSI KUNCI LANDSCAPE OTOMATIS (MENGGUNAKAN ANGKA SAKTI 1)
+# FUNGSI KUNCI LANDSCAPE OTOMATIS
 force_landscape_mode() {
     echo "[*] Memaksa dan mengunci layar ke mode Landscape..."
     su -c 'settings put system accelerometer_rotation 0' > /dev/null 2>&1
@@ -170,6 +170,10 @@ run_layout_and_engine() {
             1)
                 clear
                 echo "[*] Memulai proses Buka Aplikasi & Setup Layout..."
+                
+                # DIEKSEKUSI PERTAMA KALI SEBELUM BUKA APP
+                force_landscape_mode
+                
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
 
@@ -186,9 +190,6 @@ run_layout_and_engine() {
                     sleep 3
                 done
                 
-                # Mengunci layar menjadi Landscape menggunakan rotasi '1' SEBELUM dipotong
-                force_landscape_mode
-                
                 execute_layout
                 
                 echo ""
@@ -201,6 +202,10 @@ run_layout_and_engine() {
                 VIP_LINK=$(cat "$CONFIG_FILE")
                 
                 echo "[*] Memulai Mesin Auto AFK..."
+                
+                # DIEKSEKUSI PERTAMA KALI SEBELUM BUKA APP
+                force_landscape_mode
+
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
 
@@ -216,9 +221,6 @@ run_layout_and_engine() {
                     su -c "monkey -p $pkg -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1"
                     sleep 3
                 done
-
-                # Mengunci layar menjadi Landscape menggunakan rotasi '1' SEBELUM dipotong
-                force_landscape_mode
 
                 echo "[*] TAHAP 4: Mengeksekusi Layout Grid dari GitHub..."
                 execute_layout
