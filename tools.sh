@@ -8,7 +8,6 @@ CONFIG_FILE="/sdcard/Download/.vip_link_arsy.txt"
 # FUNGSI BANTUAN
 # ==========================================
 drop_android_ram() {
-    # Metode aman untuk Cloud Phone
     su -c 'am kill-all' > /dev/null 2>&1
     PACKAGES=$(get_roblox_packages)
     for pkg in $PACKAGES; do
@@ -26,13 +25,17 @@ execute_layout() {
     sleep 2
 }
 
-# FUNGSI BARU: Mengembalikan Rotasi ke Landscape Asli Cloud Phone
-reset_display_rotation() {
-    echo "[*] Menstabilkan orientasi layar ke mode Default (Landscape)..."
-    su -c 'settings put system accelerometer_rotation 0' > /dev/null 2>&1
-    su -c 'settings put system user_rotation 0' > /dev/null 2>&1
-    su -c 'content insert --uri content://settings/system --bind name:s:user_rotation --bind value:i:0' > /dev/null 2>&1
-    su -c 'wm rotation 0' > /dev/null 2>&1
+# FUNGSI BARU: Trik Sensor Redfinger
+force_landscape() {
+    echo "[*] Mengkalibrasi ulang sensor layar agar menuruti posisi Redfinger..."
+    # 1. Menghapus paksaan orientasi kaku (Kembali ke mode Sensor/Bebas)
+    su -c 'wm rotation -1' > /dev/null 2>&1
+    
+    # 2. Menyalakan Auto-Rotate secara paksa dari akar sistem Android
+    su -c 'settings put system accelerometer_rotation 1' > /dev/null 2>&1
+    
+    # 3. Memicu Android untuk mengecek ulang posisi layar saat ini
+    su -c 'am broadcast -a android.intent.action.CONFIGURATION_CHANGED' > /dev/null 2>&1
     sleep 2
 }
 
@@ -173,9 +176,6 @@ run_layout_and_engine() {
                 clear
                 echo "[*] Memulai proses Buka Aplikasi & Setup Layout..."
                 
-                # Panggil fungsi reset rotasi sebelum aplikasi terbuka
-                reset_display_rotation
-                
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
 
@@ -192,6 +192,8 @@ run_layout_and_engine() {
                     sleep 3
                 done
                 
+                # Paksa sistem membaca sensor Redfinger (Landscape) tepat sebelum memotong layar
+                force_landscape
                 execute_layout
                 
                 echo ""
@@ -204,9 +206,6 @@ run_layout_and_engine() {
                 VIP_LINK=$(cat "$CONFIG_FILE")
                 
                 echo "[*] Memulai Mesin Auto AFK..."
-                
-                # Panggil fungsi reset rotasi sebelum mulai AFK
-                reset_display_rotation
                 
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
@@ -224,6 +223,8 @@ run_layout_and_engine() {
                 done
 
                 echo "[*] TAHAP 3: Mengeksekusi Layout Grid dari GitHub..."
+                # Paksa sistem membaca sensor Redfinger (Landscape) tepat sebelum memotong layar
+                force_landscape
                 execute_layout
                 
                 echo "    Menunggu 15 detik agar aplikasi me-reload di mode Grid..."
