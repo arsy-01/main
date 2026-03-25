@@ -1,77 +1,68 @@
 #!/bin/bash
+echo "[*] Menjalankan layout.sh (Dynamic Grid Auto-Resize)..."
 
-echo "=== 1. PERSIAPAN SISTEM & ORIENTASI ==="
-su -c "settings put system accelerometer_rotation 0"
-su -c "settings put system user_rotation 1"
-echo "[+] Orientasi dikunci ke Landscape."
-sleep 1
+# Deteksi package Roblox
+PACKAGES=$(su -c 'pm list packages' | grep -i 'roblox' | awk -F':' '{print $2}' | tr -d '\r')
+TOTAL_APPS=$(echo "$PACKAGES" | wc -w)
 
-echo "=== 2. SCANNING APLIKASI ==="
-apps=($(su -c "pm list packages" | grep "com.roblox.clien" | cut -d':' -f2 | tr -d '\r' | sort))
-count=${#apps[@]}
-
-if [ "$count" -eq 0 ]; then
-    echo "[!] Tidak ada aplikasi ditemukan."
+if [ "$TOTAL_APPS" -eq 0 ]; then
+    echo "    [!] Tidak ada aplikasi Roblox yang terdeteksi!"
     exit 1
 fi
 
-SCREEN_RES=$(su -c "wm size" | awk '{print $NF}' | tail -n 1)
-W=$(echo $SCREEN_RES | cut -d'x' -f1)
-H=$(echo $SCREEN_RES | cut -d'x' -f2)
-
-if [ "$W" -lt "$H" ]; then
-    temp=$W
-    W=$H
-    H=$temp
+# 1. Menentukan jumlah grid (dibulatkan ke genap)
+SLOTS=$TOTAL_APPS
+if [ $((SLOTS % 2)) -ne 0 ]; then
+    SLOTS=$((SLOTS + 1))
 fi
 
-cols=1
-while [ $((cols * cols)) -lt "$count" ]; do
-    cols=$((cols + 1))
-done
-rows=$(( (count + cols - 1) / cols ))
+# Menentukan kolom dan baris berdasarkan jumlah slot
+if [ "$SLOTS" -le 2 ]; then COLS=2; ROWS=1
+elif [ "$SLOTS" -le 4 ]; then COLS=2; ROWS=2
+elif [ "$SLOTS" -le 6 ]; then COLS=3; ROWS=2
+elif [ "$SLOTS" -le 8 ]; then COLS=4; ROWS=2
+else COLS=4; ROWS=$(((SLOTS + 3) / 4))
+fi
 
-OFFSET_TOP=35
-H_USABLE=$(( H - OFFSET_TOP ))
+# 2. Mendapatkan Resolusi Layar Otomatis
+RES=$(su -c 'wm size' | grep -o '[0-9]*x[0-9]*' | head -n 1)
+W=$(echo "$RES" | cut -d'x' -f1)
+H=$(echo "$RES" | cut -d'x' -f2)
 
-cellW=$(( W / cols ))
-cellH=$(( H_USABLE / rows ))
+# Pastikan perhitungan selalu menganggap layar sedang Landscape
+if [ "$H" -gt "$W" ]; then
+    TEMP=$W; W=$H; H=$TEMP
+fi
 
-MARGIN_TEPI=2
-GAP_ANTAR=2
+# 3. Rumus Ukuran Jendela
+BOX_W=$(( (W - 4 - (COLS - 1) * 4) / COLS ))
+BOX_H=$(( (H - 40 - (ROWS - 1) * 4) / ROWS ))
 
-echo "[+] Resolusi: ${W}x${H} | Grid: ${cols}x${rows}"
+echo "    [i] Resolusi: ${W}x${H} | Format Grid: ${COLS}x${ROWS}"
 
-for i in "${!apps[@]}"; do
-    app=${apps[$i]}
-    ACTIVITY="$app/com.roblox.client.startup.ActivitySplash"
+# 4. Mengeksekusi Resize ke setiap Aplikasi
+INDEX=0
+for pkg in $PACKAGES; do
+    ROW=$(( INDEX / COLS ))
+    COL=$(( INDEX % COLS ))
+
+    LEFT=$(( 2 + COL * (BOX_W + 4) ))
+    TOP=$(( 37 + ROW * (BOX_H + 4) ))
+    RIGHT=$(( LEFT + BOX_W ))
+    BOTTOM=$(( TOP + BOX_H ))
+
+    echo " -> Memproses ($((INDEX+1))/$TOTAL_APPS): $pkg"
     
-    echo "-----------------------------------"
-    echo "-> Memproses ($((i+1))/$count): $app"
-    
-    su -c "am force-stop $app"
-    sleep 0.5
-    
-    c=$(( i % cols ))
-    r=$(( i / cols ))
-    
-    L=$(( c * cellW + MARGIN_TEPI ))
-    R=$(( (c + 1) * cellW - MARGIN_TEPI ))
-    T=$(( r * cellH + OFFSET_TOP + MARGIN_TEPI ))
-    B=$(( (r + 1) * cellH + OFFSET_TOP - GAP_ANTAR ))
-    
-    echo "   [+] Kordinat: L:$L, T:$T, R:$R, B:$B"
-    
-    su -c "am start -n $ACTIVITY --windowingMode 5 > /dev/null 2>&1"
-    sleep 3
-    
-    TASK_ID=$(su -c "dumpsys activity activities | grep 'TaskRecord' | grep '$app' | grep -o '#[0-9]*' | tr -d '#' | head -n 1")
+    # Menarik Task ID dari game untuk dieksekusi resizenya
+    TASK_ID=$(su -c "dumpsys activity activities | grep -E 'TaskRecord.*$pkg' | grep -o '#[0-9]*' | tr -d '#' | head -n 1")
     
     if [ -n "$TASK_ID" ]; then
-        su -c "am task resize $TASK_ID $L $T $R $B > /dev/null 2>&1"
+        su -c "am task resize $TASK_ID $LEFT $TOP $RIGHT $BOTTOM" > /dev/null 2>&1
     else
-        echo "   [!] Task ID tidak ditemukan."
+        echo "    [!] Gagal melacak Task ID untuk $pkg. Lewati..."
     fi
-    sleep 1.5
+
+    INDEX=$(( INDEX + 1 ))
+    sleep 1
 done
-echo "=== DONE! ==="
+echo "    *** LAYOUT SELESAI! ***"
