@@ -1,6 +1,15 @@
 #!/bin/bash
 echo "[*] Menjalankan layout.sh (Dynamic Grid Auto-Resize)..."
 
+# --- TAMBAHAN: Memaksa Sistem Android Menjadi Landscape ---
+echo "    [*] Mengunci layar ke mode Default (Landscape)..."
+su -c 'settings put system accelerometer_rotation 0' > /dev/null 2>&1
+su -c 'settings put system user_rotation 0' > /dev/null 2>&1
+su -c 'content insert --uri content://settings/system --bind name:s:user_rotation --bind value:i:0' > /dev/null 2>&1
+su -c 'wm rotation 0' > /dev/null 2>&1
+sleep 2
+# ----------------------------------------------------------
+
 # Deteksi package Roblox
 PACKAGES=$(su -c 'pm list packages' | grep -i 'roblox' | awk -F':' '{print $2}' | tr -d '\r')
 TOTAL_APPS=$(echo "$PACKAGES" | wc -w)
