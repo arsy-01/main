@@ -20,22 +20,8 @@ get_roblox_packages() {
 }
 
 execute_layout() {
-    echo "[*] Mengunduh dan mengeksekusi Setup Layout dari GitHub..."
+    echo "[*] Mengeksekusi Setup Layout dari GitHub..."
     curl -sL "$LAYOUT_URL" | bash
-    sleep 2
-}
-
-# FUNGSI BARU: Trik Sensor Redfinger
-force_landscape() {
-    echo "[*] Mengkalibrasi ulang sensor layar agar menuruti posisi Redfinger..."
-    # 1. Menghapus paksaan orientasi kaku (Kembali ke mode Sensor/Bebas)
-    su -c 'wm rotation -1' > /dev/null 2>&1
-    
-    # 2. Menyalakan Auto-Rotate secara paksa dari akar sistem Android
-    su -c 'settings put system accelerometer_rotation 1' > /dev/null 2>&1
-    
-    # 3. Memicu Android untuk mengecek ulang posisi layar saat ini
-    su -c 'am broadcast -a android.intent.action.CONFIGURATION_CHANGED' > /dev/null 2>&1
     sleep 2
 }
 
@@ -52,16 +38,16 @@ deploy_lua_script() {
         
         if su -c "[ -d \"$DIR_AUTOEXEC\" ]"; then
             su -c "echo '$LUA_CONTENT' > \"$DIR_AUTOEXEC/arsy_card.lua\""
-            echo "    [v] Berhasil ditambahkan di folder Autoexecute"
+            echo "    [v] Berhasil ditambahkan di Autoexecute"
         else
-            echo "    [!] Folder Autoexecute belum ada (Dilewati)"
+            echo "    [!] Folder Autoexecute belum ada"
         fi
         
         if su -c "[ -d \"$DIR_SCRIPTS\" ]"; then
             su -c "echo '$LUA_CONTENT' > \"$DIR_SCRIPTS/arsy_card.lua\""
-            echo "    [v] Berhasil ditambahkan di folder Scripts"
+            echo "    [v] Berhasil ditambahkan di Scripts"
         else
-            echo "    [!] Folder Scripts belum ada (Dilewati)"
+            echo "    [!] Folder Scripts belum ada"
         fi
     done
     sleep 2
@@ -175,7 +161,6 @@ run_layout_and_engine() {
             1)
                 clear
                 echo "[*] Memulai proses Buka Aplikasi & Setup Layout..."
-                
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
 
@@ -192,8 +177,12 @@ run_layout_and_engine() {
                     sleep 3
                 done
                 
-                # Paksa sistem membaca sensor Redfinger (Landscape) tepat sebelum memotong layar
-                force_landscape
+                echo "--------------------------------------------------------"
+                echo "[!] PENTING: Aplikasi sedang memuat di layar utama (Portrait)."
+                echo "[!] Silakan putar layar Redfinger ke mode LANDSCAPE secara manual sekarang!"
+                echo "--------------------------------------------------------"
+                read -p "Jika layar SUDAH Landscape, tekan [ENTER] untuk memotong Grid..." dummy < /dev/tty
+                
                 execute_layout
                 
                 echo ""
@@ -206,7 +195,6 @@ run_layout_and_engine() {
                 VIP_LINK=$(cat "$CONFIG_FILE")
                 
                 echo "[*] Memulai Mesin Auto AFK..."
-                
                 PACKAGES=$(get_roblox_packages)
                 if [ -z "$PACKAGES" ]; then echo "[!] Tidak ada aplikasi Roblox yang terdeteksi!"; sleep 2; continue; fi
 
@@ -214,26 +202,15 @@ run_layout_and_engine() {
                 for pkg in $PACKAGES; do su -c "am force-stop $pkg"; done
                 sleep 2
 
+                echo "[*] TAHAP 2: Deploy Lua Script..."
                 deploy_lua_script
 
-                echo "[*] TAHAP 2: Membuka aplikasi secara normal..."
-                for pkg in $PACKAGES; do
-                    su -c "monkey -p $pkg -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1"
-                    sleep 3
-                done
-
-                echo "[*] TAHAP 3: Mengeksekusi Layout Grid dari GitHub..."
-                # Paksa sistem membaca sensor Redfinger (Landscape) tepat sebelum memotong layar
-                force_landscape
-                execute_layout
-                
-                echo "    Menunggu 15 detik agar aplikasi me-reload di mode Grid..."
-                sleep 15 
-
-                echo "[*] TAHAP 4: Menembakkan Link VIP..."
+                # Langsung menembakkan Link VIP (tanpa membuka Home Screen)
+                echo "[*] TAHAP 3: Menembakkan Link VIP..."
                 for pkg in $PACKAGES; do
                     echo " -> Injecting VIP ke $pkg..."
-                    su -c "am start -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
+                    # Menambahkan flag --windowingMode 5 untuk mengunci game ke dalam mode Freeform/Grid
+                    su -c "am start --windowingMode 5 -a android.intent.action.VIEW -d \"$VIP_LINK\" $pkg > /dev/null 2>&1"
                     echo "    Menunggu 60 detik agar game termuat penuh..."
                     sleep 60 
                 done
